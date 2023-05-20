@@ -5,169 +5,100 @@ from matplotlib import pyplot as plt
 from torch.utils.data import DataLoader
 from torchmetrics.classification import BinaryAccuracy
 
+from distreg.distributions.distribution import DIST_CLASS_LABELS
+
 
 def sigmoid(X):
     return np.clip(1 / (1 + np.exp(X)), 1e-6, 1 - 1e-6)
 
 
-def plot_normals_predictions(model, train_dataset, test_dataset):
-    train_data, labels, train_dists = next(
-        iter(DataLoader(train_dataset, batch_size=len(train_dataset)))
-    )
-    with torch.no_grad():
-        y_train = model(train_data).flatten()
-        plot = sns.scatterplot(
-            x=train_dists[:, 0],
-            y=train_dists[:, 1],
-            hue=y_train[:],
-            palette="RdPu",
+def plot_normals_predictions(
+    model, train_dataset, test_dataset, xlabel, ylabel
+):
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    for dataset, set_label in [
+        (train_dataset, "Train"),
+        (test_dataset, "Test"),
+    ]:
+        data, labels, (means, covs, _) = next(
+            iter(DataLoader(train_dataset, batch_size=len(dataset)))
         )
-        plot.set_title("Train predictions (unf)")
-        plt.show()
+        with torch.no_grad():
+            y = model(data).flatten()
+            plot = sns.scatterplot(
+                x=means[:, 0],
+                y=covs[:, 0, 1],
+                hue=y[:],
+                palette="RdPu",
+            )
+            plot.set_title(f"{set_label} predictions (unf)")
+            plt.show()
 
-        plot = sns.scatterplot(
-            x=train_dists[:, 0],
-            y=train_dists[:, 1],
-            hue=torch.round(y_train[:]),
-        )
-        plot.set_title("Train predictions (bin)")
-        plt.show()
-        train_acc = round(100 * (BinaryAccuracy()(y_train, labels)).item(), 3)
-    print(f"Train Accuracy: {train_acc}")
+            plot = sns.scatterplot(
+                x=means[:, 0],
+                y=covs[:, 0, 1],
+                hue=torch.round(y[:]),
+            )
+            plot.set_title(f"{set_label} predictions (bin)")
+            plt.show()
 
-    test_data, labels, test_dists = next(
-        iter(DataLoader(test_dataset, batch_size=len(test_dataset)))
-    )
-    with torch.no_grad():
-        y_test = model(test_data).flatten()
-        plot = sns.scatterplot(
-            x=test_dists[:, 0],
-            y=test_dists[:, 1],
-            hue=y_test[:],
-            palette="RdPu",
-        )
-        plot.set_title("Test predictions (unf)")
-        plt.show()
-
-        plot = sns.scatterplot(
-            x=test_dists[:, 0],
-            y=test_dists[:, 1],
-            hue=torch.round(y_test[:]),
-        )
-        plot.set_title("Test predictions (bin)")
-        plt.show()
-        test_acc = round(100 * (BinaryAccuracy()(y_test, labels)).item(), 3)
-    print(f"Test accuracy: {test_acc}")
+        acc = round(100 * (BinaryAccuracy()(y, labels)).item(), 3)
+        print(f"{set_label} Accuracy: {acc}")
 
 
 def plot_bin_class_predictions(
     model,
     train_dataset,
     test_dataset,
-    class_labels,
 ):
-    class1, class2 = class_labels
-    train_data, labels, train_dists = next(
-        iter(DataLoader(train_dataset, batch_size=len(train_dataset)))
-    )
+    for dataset, set_label in [
+        (train_dataset, "Train"),
+        (test_dataset, "Test"),
+    ]:
+        data, labels, dists = next(
+            iter(DataLoader(train_dataset, batch_size=len(dataset)))
+        )
 
-    with torch.no_grad():
-        y_train = model(train_data).flatten()
-        fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-        plot = sns.scatterplot(
-            x=train_dists[labels == 0, 0],
-            y=train_dists[labels == 0, 1],
-            hue=y_train[labels == 0],
-            hue_norm=(0, 1),
-            palette="RdPu",
-            ax=axs[0],
-        )
-        axs[0].set(xlabel="mu", ylabel="sigma")
-        plot.set_title(f"{class1}")
-        plot = sns.scatterplot(
-            x=train_dists[labels == 1, 0],
-            y=train_dists[labels == 1, 1],
-            hue=y_train[labels == 1],
-            palette="RdPu",
-            hue_norm=(0, 1),
-            ax=axs[1],
-        )
-        axs[1].set(xlabel="mu", ylabel="sigma")
-        plot.set_title(f"{class2}")
-        fig.suptitle("Train predictions (unf)")
-        plt.show()
+        with torch.no_grad():
+            y = model(data).flatten()
+            unique_dist_classes = torch.unique(dists[:, 2]).tolist()
+            n_dist_classes = len(unique_dist_classes)
+            fig, axs = plt.subplots(
+                1, n_dist_classes, figsize=(5 * n_dist_classes, 5)
+            )
+            for i, dist_class in enumerate(unique_dist_classes):
+                idx = dists[:, 2] == dist_class
+                plot = sns.scatterplot(
+                    x=dists[idx, 0],
+                    y=dists[idx, 1],
+                    hue=y[idx],
+                    hue_norm=(0, 1),
+                    palette="RdPu",
+                    ax=axs[i],
+                )
+                axs[i].set(xlabel="mu", ylabel="sigma")
+                plot.set_title(f"{DIST_CLASS_LABELS[dist_class]}")
+                fig.suptitle(f"{set_label} predictions (unf)")
+            plt.show()
 
-        fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-        plot = sns.scatterplot(
-            x=train_dists[labels == 0, 0],
-            y=train_dists[labels == 0, 1],
-            hue=np.round(y_train[labels == 0]),
-            ax=axs[0],
-        )
-        axs[0].set(xlabel="mu", ylabel="sigma")
-        plot.set_title(f"{class1}")
-        plot = sns.scatterplot(
-            x=train_dists[labels == 1, 0],
-            y=train_dists[labels == 1, 1],
-            hue=np.round(y_train[labels == 1]),
-            ax=axs[1],
-        )
-        axs[1].set(xlabel="mu", ylabel="sigma")
-        plot.set_title(f"{class2}")
-        fig.suptitle("Train predictions (bin)")
-        plt.show()
+            fig, axs = plt.subplots(
+                1, n_dist_classes, figsize=(5 * n_dist_classes, 5)
+            )
+            for i, dist_class in enumerate(unique_dist_classes):
+                idx = dists[:, 2] == dist_class
+                plot = sns.scatterplot(
+                    x=dists[idx, 0],
+                    y=dists[idx, 1],
+                    hue=torch.round(y[idx]),
+                    hue_norm=(0, 1),
+                    palette="RdPu",
+                    ax=axs[i],
+                )
+                axs[i].set(xlabel="mu", ylabel="sigma")
+                plot.set_title(f"{DIST_CLASS_LABELS[dist_class]}")
+                fig.suptitle(f"{set_label} predictions (bin)")
+            plt.show()
 
-        train_acc = round(100 * (BinaryAccuracy()(y_train, labels)).item(), 3)
-    print(f"Train Accuracy: {train_acc}")
-
-    test_data, labels, test_dists = next(
-        iter(DataLoader(test_dataset, batch_size=len(test_dataset)))
-    )
-    with torch.no_grad():
-        y_test = model(test_data).flatten()
-        fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-        plot = sns.scatterplot(
-            x=test_dists[labels == 0, 0],
-            y=test_dists[labels == 0, 1],
-            hue=y_test[labels == 0],
-            hue_norm=(0, 1),
-            palette="RdPu",
-            ax=axs[0],
-        )
-        axs[0].set(xlabel="mu", ylabel="sigma")
-        plot.set_title(f"{class1}")
-        plot = sns.scatterplot(
-            x=test_dists[labels == 1, 0],
-            y=test_dists[labels == 1, 1],
-            hue=y_test[labels == 1],
-            hue_norm=(0, 1),
-            palette="RdPu",
-            ax=axs[1],
-        )
-        axs[1].set(xlabel="mu", ylabel="sigma")
-        plot.set_title(f"{class2}")
-        fig.suptitle("Test predictions (unf)")
-        plt.show()
-
-        fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-        plot = sns.scatterplot(
-            x=test_dists[labels == 0, 0],
-            y=test_dists[labels == 0, 1],
-            hue=np.round(y_test[labels == 0]),
-            ax=axs[0],
-        )
-        axs[0].set(xlabel="mu", ylabel="sigma")
-        plot.set_title(f"{class1}")
-        plot = sns.scatterplot(
-            x=test_dists[labels == 1, 0],
-            y=test_dists[labels == 1, 1],
-            hue=np.round(y_test[labels == 1]),
-            ax=axs[1],
-        )
-        axs[1].set(xlabel="mu", ylabel="sigma")
-        plot.set_title(f"{class2}")
-        fig.suptitle("Test predictions (bin)")
-        plt.show()
-
-        test_acc = round(100 * (BinaryAccuracy()(y_test, labels)).item(), 3)
-    print(f"Test accuracy: {test_acc}")
+            acc = round(100 * (BinaryAccuracy()(y, labels)).item(), 3)
+        print(f"{set_label} Accuracy: {acc}")

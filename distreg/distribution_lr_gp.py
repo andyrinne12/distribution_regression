@@ -44,7 +44,11 @@ class DistributionLogisticGP:
 
     def as_dataset(self):
         return DistributionDataset(
-            self.features, self.labels, self.distributions.params
+            self.features,
+            self.labels,
+            self.distributions.means,
+            self.distributions.covs,
+            self.distributions.classes,
         )
 
     def as_split_dataset(self, train_ratio):

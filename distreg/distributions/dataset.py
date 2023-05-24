@@ -2,14 +2,12 @@ import torch
 
 
 class DistributionDataset(torch.utils.data.Dataset):
-    def __init__(self, mean_embeddings, labels, means, covs, classes):
-        self.mean_embeddings = torch.tensor(
-            mean_embeddings, dtype=torch.float64
-        )
-        self.labels = torch.tensor(labels, dtype=torch.float64)
-        self.means = torch.tensor(means, dtype=torch.float64)
-        self.covs = torch.tensor(covs, dtype=torch.float64)
-        self.classes = torch.tensor(classes, dtype=torch.float64)
+    def __init__(self, mean_embeddings, labels, means, stds, classes):
+        self.mean_embeddings = mean_embeddings
+        self.labels = labels
+        self.means = means
+        self.stds = stds
+        self.classes = classes
 
     def __len__(self):
         return len(self.mean_embeddings)
@@ -18,5 +16,5 @@ class DistributionDataset(torch.utils.data.Dataset):
         return (
             self.mean_embeddings[idx],
             self.labels[idx],
-            (self.means[idx], self.covs[idx], self.classes[idx]),
+            (self.means[idx], self.stds[idx], self.classes[idx]),
         )

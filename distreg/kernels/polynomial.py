@@ -20,7 +20,7 @@ class PolynomialEncoder:
         mean_embeddings = np.empty((n_distributions, 4))
         for idx, sample_arr in enumerate(distributions.samples):
             features = self.encode_features(sample_arr)
-            mean = np.mean(features, axis=0, dtype=np.float64)
+            mean = np.mean(features, axis=0)
             mean_squared = mean**2
             mean_embeddings[idx] = np.concatenate([mean, mean_squared])
 

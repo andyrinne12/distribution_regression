@@ -20,8 +20,9 @@ class MultiNormal:
         Args:
             n_distributions (int): N number of distributions
             n_dims (int): dimensionality of the distribution samples
-            mu (int | tuple): mean or uniform range of means
-            sigma (int | tuple): variance or uniform range of variances
+            mean (int | tuple): mean or uniform range of means
+            var (int | tuple): variance or uniform range of variances
+            cov (int | tuple): covariance or uniform range of covariances
         """
         self.n_distributions = n_distributions
         self.n_dims = n_dims

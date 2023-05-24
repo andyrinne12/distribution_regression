@@ -42,12 +42,18 @@ class DistributionLogisticGP:
             self.distributions
         )
 
+    def encode_to_features(self, samples):
+        mean_embedding = self.kme_encoder.mean_embed(samples)
+        mean_embedding = mean_embedding.reshape(1, *mean_embedding.shape)
+        features = self.reg_encoder.encode_features(mean_embedding)
+        return features
+
     def as_dataset(self):
         return DistributionDataset(
             self.features,
             self.labels,
             self.distributions.means,
-            self.distributions.covs,
+            self.distributions.stds,
             self.distributions.classes,
         )
 

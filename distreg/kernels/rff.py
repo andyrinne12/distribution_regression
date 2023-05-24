@@ -1,6 +1,7 @@
 from ctypes import ArgumentError
 
 import numpy as np
+import torch
 
 
 class RffEncoder:
@@ -25,17 +26,23 @@ class RffEncoder:
             raise ArgumentError("Weights not initialized")
         assert self._n_features == self.omega.shape[0]
 
-        features = np.cos(np.einsum("sd, fd -> sf", X, self.omega) + self.phi)
+        features = torch.cos(
+            torch.einsum("sd, fd -> sf", X, self.omega) + self.phi
+        )
         features = self.amplitude * (2 / self.omega.shape[0]) ** 0.5 * features
         return features
+
+    def mean_embed(self, samples):
+        features = self.encode_features(samples)
+        return torch.mean(features, dim=0)
 
     def gen_mean_embeddings(self, distributions):
         n_distributions = distributions.n_distributions
 
-        mean_embeddings = np.empty((n_distributions, self._n_features))
+        mean_embeddings = torch.empty((n_distributions, self._n_features))
         for idx, sample_arr in enumerate(distributions.samples):
             features = self.encode_features(sample_arr)
-            mean_embeddings[idx] = np.mean(features, axis=0)
+            mean_embeddings[idx] = torch.mean(features, dim=0)
 
         # mean_embeddings = (
         #     mean_embeddings - np.mean(mean_embeddings, axis=0)
@@ -69,13 +76,23 @@ class RffEncoder:
     def _gen_features(self):
         omega_shape = (self.n_features, self.n_dims)
         if self.kernel == "gaussian":
-            self.omega = np.random.normal(size=omega_shape)
+            self.omega = torch.tensor(
+                np.random.normal(size=omega_shape), dtype=torch.float32
+            )
         elif self.kernel == "laplacian":
-            self.omega = np.random.laplace(size=omega_shape)
+            self.omega = torch.tensor(
+                np.random.laplace(size=omega_shape), dtype=torch.float32
+            )
         elif self.kernel == "cauchy":
-            self.omega = np.random.standard_cauchy(size=omega_shape)
+            self.omega = torch.tensor(
+                np.random.standard_cauchy(size=omega_shape),
+                dtype=torch.float32,
+            )
         else:
             raise ArgumentError(f"Invalid kernel: {self.kernel}")
 
         self.omega /= self.length_scale
-        self.phi = np.random.uniform(0, 2 * np.pi, (self.n_features))
+        self.phi = torch.tensor(
+            np.random.uniform(0, 2 * np.pi, (self.n_features)),
+            dtype=torch.float32,
+        )

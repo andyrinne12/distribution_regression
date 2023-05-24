@@ -56,22 +56,26 @@ def plot_bin_class_predictions(
         (train_dataset, "Train"),
         (test_dataset, "Test"),
     ]:
-        data, labels, dists = next(
+        data, labels, (means, stds, classes) = next(
             iter(DataLoader(train_dataset, batch_size=len(dataset)))
         )
+        means = means.flatten()
+        stds = stds.flatten()
+        classes = classes.flatten()
+        labels = labels.flatten()
 
         with torch.no_grad():
             y = model(data).flatten()
-            unique_dist_classes = torch.unique(dists[:, 2]).tolist()
+            unique_dist_classes = torch.unique(classes).tolist()
             n_dist_classes = len(unique_dist_classes)
             fig, axs = plt.subplots(
                 1, n_dist_classes, figsize=(5 * n_dist_classes, 5)
             )
             for i, dist_class in enumerate(unique_dist_classes):
-                idx = dists[:, 2] == dist_class
+                idx = classes == dist_class
                 plot = sns.scatterplot(
-                    x=dists[idx, 0],
-                    y=dists[idx, 1],
+                    x=means[idx],
+                    y=stds[idx],
                     hue=y[idx],
                     hue_norm=(0, 1),
                     palette="RdPu",
@@ -86,10 +90,10 @@ def plot_bin_class_predictions(
                 1, n_dist_classes, figsize=(5 * n_dist_classes, 5)
             )
             for i, dist_class in enumerate(unique_dist_classes):
-                idx = dists[:, 2] == dist_class
+                idx = classes == dist_class
                 plot = sns.scatterplot(
-                    x=dists[idx, 0],
-                    y=dists[idx, 1],
+                    x=means[idx],
+                    y=stds[idx],
                     hue=torch.round(y[idx]),
                     hue_norm=(0, 1),
                     palette="RdPu",

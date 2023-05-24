@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 DIST_CLASSES = {
     "uniform": 0,
@@ -11,32 +12,65 @@ DIST_CLASSES = {
 DIST_CLASS_LABELS = {DIST_CLASSES[k]: k for k in DIST_CLASSES}
 
 
-class Distribution:
+class UnivarDistribution:
     def __init__(
         self,
         n_distributions: int,
         n_dims: int,
-        params: np.ndarray,
-        samples: np.ndarray,
+        means: np.ndarray,
+        stds: np.ndarray,
+        classes: np.ndarray,
+        samples=None,
     ):
         self.n_distributions = n_distributions
         self.n_dims = n_dims
-        self.params = params
+        self.means = means
+        self.stds = stds
+        self.classes = classes
         self.samples = samples
 
-    # def sample(self, n_samples: int) -> None:
-    #     self.samples = np.empty((self.n_distributions, n_samples, self.n_dims))
-    #     for i, [mu, sigma] in enumerate(self.params[:, :2]):
-    #         self.samples[i] = np.random.normal(
-    #             mu, sigma, size=(n_samples, self.n_dims)
-    #         )
-    #     return self.samples
+    @classmethod
+    def rand_unf_univar(
+        cls,
+        n_distributions: int,
+        n_dims: int,
+        mean: int | tuple[int, int],
+        std: int | tuple[int, int],
+    ):
+        """Generate N distributions with fixed or uniformly sampled
+        mean and variances.
+
+        Args:
+            n_distributions (int): N number of distributions
+            n_dims (int): dimensionality of the distribution samples
+            dist_class (int): distribution class
+            mean (int | tuple): mean or uniform range of means
+            std (int | tuple): standard deviation or uniform range of
+                stds
+        """
+        means = torch.empty((n_distributions, n_dims))
+        stds = torch.empty((n_distributions, n_dims))
+
+        if type(mean) is tuple:
+            means[:, :] = torch.from_numpy(
+                np.random.uniform(mean[0], mean[1], size=(n_distributions, 1))
+            )
+        else:
+            means[:, :] = mean
+
+        if type(std) is tuple:
+            stds[:, :] = torch.from_numpy(
+                np.random.uniform(std[0], std[1], size=(n_distributions, 1))
+            )
+        else:
+            stds[:, :] = std
+        return (means, stds)
 
     def bin_dist_class_labels(self, _class: float):
-        return self.params[:, 2] == _class
+        return (self.classes == _class).astype(float)
 
-    def bin_sigma_gt_labels(self, sigma_threshold: float):
-        return (self.params[:, 1] > sigma_threshold).astype(float)
+    def bin_sigma_gt_labels(self, std_threshold: float):
+        return (self.stds > std_threshold).astype(float)
 
 
 def concatenate_distributions(distributions):
@@ -50,9 +84,15 @@ def concatenate_distributions(distributions):
                 f"Distribution item {i} has a different dimension {d.n_dims}"
                 " than the others {n_dims}"
             )
-    params = np.concatenate(list(map(lambda d: d.params, distributions)))
-    samples = np.concatenate(list(map(lambda d: d.samples, distributions)))
-    assert params.shape[0] == n_distributions
+    means = torch.concatenate(list(map(lambda d: d.means, distributions)))
+    stds = torch.concatenate(list(map(lambda d: d.stds, distributions)))
+    classes = torch.concatenate(list(map(lambda d: d.classes, distributions)))
+    samples = torch.concatenate(list(map(lambda d: d.samples, distributions)))
+    assert means.shape[0] == n_distributions
+    assert stds.shape[0] == n_distributions
+    assert classes.shape[0] == n_distributions
     if samples is not None:
         assert samples.shape[0] == n_distributions
-    return Distribution(n_distributions, n_dims, params, samples)
+    return UnivarDistribution(
+        n_distributions, n_dims, means, stds, classes, samples
+    )

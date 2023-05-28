@@ -21,32 +21,38 @@ class RffEncoder:
         self.omega = None
         self._gen_features()
 
-    def encode_features(self, X):
+    def encode_features(self, X, single=False):
         if self.omega is None:
             raise ArgumentError("Weights not initialized")
         assert self._n_features == self.omega.shape[0]
 
-        features = torch.cos(
-            torch.einsum("sd, fd -> sf", X, self.omega) + self.phi
-        )
+        if single:
+            features = torch.cos(
+                torch.einsum("sd, fd -> sf", X, self.omega) + self.phi
+            )
+        else:
+            features = torch.cos(
+                torch.einsum("nsd, fd -> nsf", X, self.omega) + self.phi
+            )
         features = self.amplitude * (2 / self.omega.shape[0]) ** 0.5 * features
         return features
 
     def mean_embed(self, samples):
         features = self.encode_features(samples)
-        return torch.mean(features, dim=0)
+        return torch.mean(features, dim=1)
 
     def gen_mean_embeddings(self, distributions):
         n_distributions = distributions.n_distributions
 
         mean_embeddings = torch.empty((n_distributions, self._n_features))
         for idx, sample_arr in enumerate(distributions.samples):
-            features = self.encode_features(sample_arr)
+            features = self.encode_features(sample_arr, single=True)
             mean_embeddings[idx] = torch.mean(features, dim=0)
+        return mean_embeddings
 
-        # mean_embeddings = (
-        #     mean_embeddings - np.mean(mean_embeddings, axis=0)
-        # ) / np.std(mean_embeddings, axis=0)
+    def gen_mean_embeddings_from_tensor(self, samples):
+        features = self.encode_features(samples)
+        mean_embeddings = torch.mean(features, dim=1)
         return mean_embeddings
 
     @property

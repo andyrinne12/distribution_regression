@@ -27,6 +27,8 @@ class Normal(UnivarDistribution):
         means, stds = super().rand_unf_univar(
             n_distributions, n_dims, mean, std
         )
+        if subclass == "gamma":
+            means = torch.abs(means)
         classes = torch.from_numpy(
             np.full(n_distributions, DIST_CLASSES[subclass])
         )

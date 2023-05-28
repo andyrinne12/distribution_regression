@@ -72,6 +72,7 @@ def plot_bin_class_predictions(
                 1, n_dist_classes, figsize=(5 * n_dist_classes, 5)
             )
             for i, dist_class in enumerate(unique_dist_classes):
+                c_axs = axs[i] if n_dist_classes > 1 else axs
                 idx = classes == dist_class
                 plot = sns.scatterplot(
                     x=means[idx],
@@ -79,9 +80,9 @@ def plot_bin_class_predictions(
                     hue=y[idx],
                     hue_norm=(0, 1),
                     palette="RdPu",
-                    ax=axs[i],
+                    ax=c_axs,
                 )
-                axs[i].set(xlabel="mu", ylabel="sigma")
+                c_axs.set(xlabel="mu", ylabel="sigma")
                 plot.set_title(f"{DIST_CLASS_LABELS[dist_class]}")
                 fig.suptitle(f"{set_label} predictions (unf)")
             plt.show()
@@ -97,9 +98,9 @@ def plot_bin_class_predictions(
                     hue=torch.round(y[idx]),
                     hue_norm=(0, 1),
                     palette="RdPu",
-                    ax=axs[i],
+                    ax=c_axs,
                 )
-                axs[i].set(xlabel="mu", ylabel="sigma")
+                c_axs.set(xlabel="mu", ylabel="sigma")
                 plot.set_title(f"{DIST_CLASS_LABELS[dist_class]}")
                 fig.suptitle(f"{set_label} predictions (bin)")
             plt.show()

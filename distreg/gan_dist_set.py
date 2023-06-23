@@ -55,4 +55,4 @@ class GanDistributionSet:
     def loss_weights(self):
         n_fake_samples = self.labels.shape[0] - 1
         weights = (self.labels) / 2 + (1 - self.labels) / (2 * n_fake_samples)
-        return weights
+        return weights * (n_fake_samples + 1)

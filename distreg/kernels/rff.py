@@ -87,12 +87,12 @@ class RffEncoder:
             )
         elif self.kernel == "laplacian":
             self.omega = torch.tensor(
-                np.random.laplace(size=omega_shape), dtype=torch.float32
+                np.random.standard_cauchy(size=omega_shape),
+                dtype=torch.float32,
             )
         elif self.kernel == "cauchy":
             self.omega = torch.tensor(
-                np.random.standard_cauchy(size=omega_shape),
-                dtype=torch.float32,
+                np.random.laplace(size=omega_shape), dtype=torch.float32
             )
         else:
             raise ArgumentError(f"Invalid kernel: {self.kernel}")

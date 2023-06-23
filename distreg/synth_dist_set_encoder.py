@@ -20,10 +20,12 @@ class SynthDistributionSetEncoder:
         self.mean_embeddings = self.kme_encoder.gen_mean_embeddings(
             distributions
         )
-        print(self.mean_embeddings.shape)
-        self.features = self.reg_encoder.encode_features(
-            self.mean_embeddings, single=True
-        )
+        if self.reg_encoder is not None:
+            self.features = self.reg_encoder.encode_features(
+                self.mean_embeddings, single=True
+            )
+        else:
+            self.features = self.mean_embeddings
         self.train_idx, self.test_idx = self._train_test_split(train_ratio)
 
     def set_kme_kernel_params(
@@ -58,8 +60,23 @@ class SynthDistributionSetEncoder:
             self.distributions.classes,
         )
 
+    def as_multi_dataset(self):
+        return DistributionDataset(
+            self.features,
+            self.labels,
+            self.distributions.means,
+            self.distributions.covs,
+            self.distributions.classes,
+        )
+
     def as_split_dataset(self, train_ratio):
         dataset = self.as_dataset()
+        return torch.utils.data.random_split(
+            dataset, [train_ratio, 1 - train_ratio]
+        )
+
+    def as_split_multi_dataset(self, train_ratio):
+        dataset = self.as_multi_dataset()
         return torch.utils.data.random_split(
             dataset, [train_ratio, 1 - train_ratio]
         )

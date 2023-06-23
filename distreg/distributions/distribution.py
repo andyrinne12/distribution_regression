@@ -67,10 +67,10 @@ class UnivarDistribution:
         return (means, stds)
 
     def bin_dist_class_labels(self, _class: float):
-        return (self.classes == _class).astype(float)
+        return (self.classes == _class).type(torch.float)
 
     def bin_sigma_gt_labels(self, std_threshold: float):
-        return (self.stds > std_threshold).astype(float)
+        return (self.stds > std_threshold).type(torch.float)
 
 
 def concatenate_distributions(distributions):

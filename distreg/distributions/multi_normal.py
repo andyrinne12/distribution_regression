@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 from distreg.distributions.distribution import DIST_CLASSES
 
@@ -27,48 +28,54 @@ class MultiNormal:
         self.n_distributions = n_distributions
         self.n_dims = n_dims
         self.subclass = subclass
-        self.means = np.empty((n_distributions, n_dims))
-        self.covs = np.empty((n_distributions, n_dims, n_dims))
-        self.classes = np.empty((n_distributions))
+        self.means = torch.empty((n_distributions, n_dims))
+        self.covs = torch.empty((n_distributions, n_dims, n_dims))
+        self.classes = torch.empty((n_distributions))
 
         if type(mean) is tuple:
-            self.means[:, :] = np.random.uniform(
-                mean[0], mean[1], size=(n_distributions, 1)
+            self.means[:, :] = torch.from_numpy(
+                np.random.uniform(mean[0], mean[1], size=(n_distributions, 1))
             )
         else:
             self.means[:] = mean
 
         if type(cov) is tuple:
             for i in range(n_distributions):
-                covs_mat = np.random.uniform(
-                    cov[0], cov[1], size=(n_dims, n_dims)
+                covs_mat = torch.from_numpy(
+                    np.random.uniform(cov[0], cov[1], size=(n_dims, n_dims))
                 )
-                self.covs[i] = np.tril(covs_mat) + np.tril(covs_mat, -1).T
+                self.covs[i] = (
+                    torch.tril(covs_mat) + torch.tril(covs_mat, -1).T
+                )
         else:
             self.covs[:] = cov
 
         if type(var) is tuple:
             for i in range(n_distributions):
                 if same_var:
-                    np.fill_diagonal(
-                        self.covs[i], np.random.uniform(var[0], var[1])
+                    self.covs[i].fill_diagonal_(
+                        np.random.uniform(var[0], var[1])
                     )
                 else:
-                    np.fill_diagonal(
-                        self.covs[i], np.random.uniform(var[0], var[1], n_dims)
+                    self.covs[i].fill_diagonal_(
+                        np.random.uniform(var[0], var[1], n_dims)
                     )
         else:
             for i in range(n_distributions):
-                np.fill_diagonal(self.covs[i], var)
+                self.covs[i].fill_diagonal_(var)
 
         self.classes[:] = DIST_CLASSES[self.subclass]
 
     def sample(self, n_samples: int) -> None:
-        self.samples = np.empty((self.n_distributions, n_samples, self.n_dims))
+        self.samples = torch.empty(
+            (self.n_distributions, n_samples, self.n_dims)
+        )
         for i in range(self.n_distributions):
             if self.subclass == "normal":
-                self.samples[i] = np.random.multivariate_normal(
-                    self.means[i], self.covs[i], size=(n_samples)
+                self.samples[i] = torch.from_numpy(
+                    np.random.multivariate_normal(
+                        self.means[i], self.covs[i], size=(n_samples)
+                    )
                 )
             # elif self.subclass == "laplacian":
             #     self.samples[i] = np.random.laplace(
